@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mandatory 6–7 Minute Gate</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --bg: #0f1220;
+    --panel: #171a2a;
+    --card: #1d2033;
+    --text: #dce0f3;
+    --muted: #9aa2c7;
+    --accent: #6f8cff;
+    --accent-2: #ff6f91;
+    --warn: #ffbf47;
+    --good: #6fff9b;
+    --danger: #ff4d6d;
+  }
+  html, body { height: 100%; }
+  body {
+    margin:0; background:linear-gradient(180deg,#0b0e19 0%, var(--bg) 100%);
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
+    color:var(--text);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .shell {
+    width: min(900px, 92vw);
+    background: linear-gradient(180deg, #131626 0%, var(--panel) 100%);
+    border: 1px solid #2a2e45;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.04);
+    overflow: hidden;
+  }
+  header {
+    padding: 18px 22px;
+    background: linear-gradient(180deg, #1a1e31 0%, #15182a 100%);
+    border-bottom: 1px solid #2a2e45;
+    display:flex; justify-content:space-between; align-items:center;
+  }
+  header h1 { margin:0; font-size: 18px; letter-spacing: 0.2px; }
+  header .badge {
+    background: #22263b; border: 1px solid #2f3452; color:var(--muted);
+    padding: 6px 10px; border-radius: 999px; font-size: 12px;
+  }
+  .content { padding: 22px; display:grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .card {
+    background: var(--card);
+    border: 1px solid #2a2e45;
+    border-radius: 12px;
+    padding: 16px;
+  }
+  .card h2 { margin:0 0 8px; font-size:16px; }
+  .card p { margin: 6px 0 12px; color: var(--muted); font-size: 13px; line-height:1.4; }
+  .stage {
+    margin-top: 8px; padding: 12px; border-radius: 10px;
+    background: #14172a;
+    border: 1px dashed #2f3452;
+  }
+  .stage .title {
+    display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;
+    font-size:13px; color:var(--muted);
+  }
+  .progress-wrap {
+    background:#0d1020; border:1px solid #273056; border-radius: 999px;
+    height: 12px; overflow:hidden; box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
+  }
+  .progress {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    transition: width 0.08s linear;
+  }
+
+  /* Controls */
+  .hold-btn {
+    width: 100%; padding: 16px; border-radius: 10px;
+    border: 1px solid #37406c; background: #1c2140; color: var(--text);
+    font-weight: 600; letter-spacing: 0.3px; cursor: pointer;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+  }
+  .hold-btn:active { transform: translateY(1px); }
+  .target-area {
+    height: 160px; display:flex; align-items:center; justify-content:center;
+    border-radius: 10px; border: 1px solid #37406c; background: #131734;
+    position: relative; overflow: hidden;
+  }
+  .tiny-target {
+    width: 28px; height: 28px; border-radius: 999px;
+    background: radial-gradient(circle at 30% 30%, #8aa2ff, #5569ff 70%);
+    border: 2px solid #b9c6ff; box-shadow: 0 8px 24px rgba(111,140,255,0.35);
+    position: absolute; inset: 0; margin: auto;
+  }
+  .keyboard-area {
+    height: 120px; border-radius:10px; border: 1px solid #37406c; background:#131734;
+    display:flex; align-items:center; justify-content:center; text-align:center;
+  }
+  .keyboard-area .msg { color: var(--muted); font-size: 13px; }
+  .slider-wrap {
+    padding: 10px; border-radius:10px; border: 1px solid #37406c; background:#131734;
+  }
+  .slider-line {
+    height: 12px; background:#0d1020; border:1px solid #273056; border-radius:999px; position:relative;
+  }
+  .slider-fill {
+    position:absolute; left:0; top:0; bottom:0;
+    width:0%; background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    box-shadow: inset 0 0 12px rgba(111,140,255,0.5);
+    transition: width 0.06s linear;
+  }
+  .slider-thumb {
+    position:absolute; top:50%; transform: translate(-50%, -50%);
+    width: 22px; height: 22px; border-radius: 999px; background:#ff6f91;
+    border: 2px solid #ffc2d0; box-shadow: 0 6px 20px rgba(255,111,145,0.45);
+    cursor: grab;
+  }
+  .final {
+    grid-column: 1 / -1;
+    display:flex; align-items:center; gap: 14px;
+    border-top: 1px solid #2a2e45; padding: 16px 22px; background: #131626;
+  }
+  .final .lock {
+    width: 12px; height: 12px; border-radius:999px;
+    background: var(--danger); box-shadow: 0 0 0 4px rgba(255,77,109,0.12) inset;
+  }
+  .final .unlock { background: var(--good); box-shadow: 0 0 0 4px rgba(111,255,155,0.12) inset; }
+  .final button {
+    margin-left:auto; padding: 12px 18px; border-radius: 10px; border: 1px solid #37406c;
+    background: #1c2140; color: var(--text); font-weight:700; letter-spacing:0.3px;
+    opacity: 0.55; cursor: not-allowed;
+  }
+  .final button.enabled { opacity: 1; cursor: pointer; background: linear-gradient(180deg,#21306b,#1b2350); }
+  .hint { color: var(--warn); font-size: 12px; }
+  .note { color: var(--muted); font-size: 12px; }
+  .row { display:flex; gap: 8px; align-items:center; }
+</style>
+</head>
+<body>
+<div class="shell" role="application" aria-label="Mandatory interaction gate">
+  <header>
+    <h1>Interaction gate — you must complete all stages</h1>
+    <div class="badge">Cumulative minimum: ~6.7 minutes</div>
+  </header>
+
+  <div class="content">
+    <div class="card">
+      <h2>Stage 1 — Continuous hold for 120 seconds</h2>
+      <p>Press and hold the button without releasing. If you release, switch tabs, or move your pointer off the button, the timer resets.</p>
+      <div class="stage" id="stage1">
+        <div class="title">
+          <span>Progress toward 120s</span>
+          <span><strong id="s1_time">0.0</strong>s</span>
+        </div>
+        <div class="progress-wrap" aria-label="Stage 1 progress">
+          <div class="progress" id="s1_progress"></div>
+        </div>
+        <div style="margin-top:12px;">
+          <button id="holdBtn" class="hold-btn" aria-live="polite" aria-label="Hold to advance">Press and hold — do not release</button>
+          <div class="row" style="margin-top:8px;">
+            <span class="hint" id="s1_hint">Holding...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Stage 2 — Stay parked on the tiny target for 90 seconds</h2>
+      <p>Move your cursor onto the target and keep it there continuously. Any drift off the target resets this stage.</p>
+      <div class="stage" id="stage2">
+        <div class="title">
+          <span>Progress toward 90s</span>
+          <span><strong id="s2_time">0.0</strong>s</span>
+        </div>
+        <div class="progress-wrap" aria-label="Stage 2 progress">
+          <div class="progress" id="s2_progress"></div>
+        </div>
+        <div class="target-area" id="targetArea">
+          <div class="tiny-target" id="tinyTarget" title="Stay here"></div>
+        </div>
+        <div class="row" style="margin-top:8px;">
+          <span class="hint" id="s2_hint">Hover and stay parked on the target.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Stage 3 — Keyboard activity ≥ 1 key per second for 80 seconds</h2>
+      <p>While this stage is active, keep pressing keys so the rate doesn’t drop. If you stop, the timer pauses and will reset after a short grace period.</p>
+      <div class="stage" id="stage3">
+        <div class="title">
+          <span>Progress toward 80s</span>
+          <span><strong id="s3_time">0.0</strong>s</span>
+        </div>
+        <div class="progress-wrap" aria-label="Stage 3 progress">
+          <div class="progress" id="s3_progress"></div>
+        </div>
+        <div class="keyboard-area" id="keyboardArea" tabindex="0" aria-label="Keyboard activity area">
+          <div>
+            <div class="msg" id="s3_msg">Click here to focus, then tap keys continuously.</div>
+            <div class="row" style="margin-top:6px;">
+              <span class="note">Keys in last 1s: <strong id="s3_rate">0</strong></span>
+            </div>
+          </div>
+        </div>
+        <div class="row" style="margin-top:8px;">
+          <span class="hint" id="s3_hint">Maintain ≥ 1 key per second.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Stage 4 — Slow drag slider to 100% (110 seconds minimum)</h2>
+      <p>Click and drag the thumb. It only advances 1% per second while dragging. Releasing or switching tabs resets the stage.</p>
+      <div class="stage" id="stage4">
+        <div class="title">
+          <span>Slider completion</span>
+          <span><strong id="s4_pct">0%</strong></span>
+        </div>
+        <div class="slider-wrap">
+          <div class="slider-line" id="sliderLine">
+            <div class="slider-fill" id="sliderFill"></div>
+            <div class="slider-thumb" id="sliderThumb" style="left: 0%;"></div>
+          </div>
+        </div>
+        <div class="row" style="margin-top:8px;">
+          <span class="hint" id="s4_hint">Drag continuously to progress. Release resets.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="final">
+      <div class="lock" id="lockDot" aria-hidden="true"></div>
+      <div>
+        <div style="font-weight:700;">Final action</div>
+        <div class="note">This unlocks only after all four stages are fully complete without interruption.</div>
+      </div>
+      <button id="finalBtn" disabled>Proceed</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* Strictly-timed annoyance gate — totals ~400s */
+(function(){
+  const totalTimes = {
+    s1: 120, // seconds
+    s2: 90,
+    s3: 80,
+    s4: 110 // slider to 100% at 1% per second
+  };
+
+  const state = {
+    currentStage: 1,
+    s1: {holding:false, time:0, interval:null},
+    s2: {onTarget:false, time:0, interval:null},
+    s3: {active:false, time:0, rate:0, keyCountWindow:0, interval:null, graceTimer:null},
+    s4: {dragging:false, pct:0, interval:null},
+    locked:true
+  };
+
+  const el = {
+    holdBtn: document.getElementById('holdBtn'),
+    s1Progress: document.getElementById('s1_progress'),
+    s1Time: document.getElementById('s1_time'),
+    s1Hint: document.getElementById('s1_hint'),
+
+    targetArea: document.getElementById('targetArea'),
+    tinyTarget: document.getElementById('tinyTarget'),
+    s2Progress: document.getElementById('s2_progress'),
+    s2Time: document.getElementById('s2_time'),
+    s2Hint: document.getElementById('s2_hint'),
+
+    keyboardArea: document.getElementById('keyboardArea'),
+    s3Progress: document.getElementById('s3_progress'),
+    s3Time: document.getElementById('s3_time'),
+    s3Rate: document.getElementById('s3_rate'),
+    s3Msg: document.getElementById('s3_msg'),
+    s3Hint: document.getElementById('s3_hint'),
+
+    sliderLine: document.getElementById('sliderLine'),
+    sliderThumb: document.getElementById('sliderThumb'),
+    sliderFill: document.getElementById('sliderFill'),
+    s4Pct: document.getElementById('s4_pct'),
+    s4Hint: document.getElementById('s4_hint'),
+
+    finalBtn: document.getElementById('finalBtn'),
+    lockDot: document.getElementById('lockDot')
+  };
+
+  // Utility
+  const clamp = (v,min,max) => Math.max(min, Math.min(max, v));
+  const fmt = s => s.toFixed(1);
+
+  // Hard reset of stage by number
+  function resetStage(n){
+    switch(n){
+      case 1:
+        state.s1.holding = false;
+        state.s1.time = 0;
+        if(state.s1.interval){ clearInterval(state.s1.interval); state.s1.interval = null; }
+        el.s1Progress.style.width = '0%';
+        el.s1Time.textContent = fmt(0);
+        el.s1Hint.textContent = 'Press and hold — do not release';
+        break;
+      case 2:
+        state.s2.onTarget = false;
+        state.s2.time = 0;
+        if(state.s2.interval){ clearInterval(state.s2.interval); state.s2.interval = null; }
+        el.s2Progress.style.width = '0%';
+        el.s2Time.textContent = fmt(0);
+        el.s2Hint.textContent = 'Hover and stay parked on the target.';
+        break;
+      case 3:
+        state.s3.active = false;
+        state.s3.time = 0;
+        state.s3.rate = 0;
+        state.s3.keyCountWindow = 0;
+        if(state.s3.interval){ clearInterval(state.s3.interval); state.s3.interval = null; }
+        if(state.s3.graceTimer){ clearTimeout(state.s3.graceTimer); state.s3.graceTimer = null; }
+        el.s3Progress.style.width = '0%';
+        el.s3Time.textContent = fmt(0);
+        el.s3Rate.textContent = '0';
+        el.s3Hint.textContent = 'Maintain ≥ 1 key per second.';
+        el.s3Msg.textContent = 'Click here to focus, then tap keys continuously.';
+        break;
+      case 4:
+        state.s4.dragging = false;
+        state.s4.pct = 0;
+        if(state.s4.interval){ clearInterval(state.s4.interval); state.s4.interval = null; }
+        el.sliderFill.style.width = '0%';
+        el.sliderThumb.style.left = '0%';
+        el.s4Pct.textContent = '0%';
+        el.s4Hint.textContent = 'Drag continuously to progress. Release resets.';
+        break;
+    }
+  }
+
+  function advanceStage(){
+    state.currentStage++;
+    if(state.currentStage > 4){
+      state.locked = false;
+      el.lockDot.classList.add('unlock');
+      el.finalBtn.disabled = false;
+      el.finalBtn.classList.add('enabled');
+      el.finalBtn.textContent = 'Proceed (unlocked)';
+    }
+  }
+
+  // Stage 1 — Continuous hold
+  el.holdBtn.addEventListener('mousedown', (e)=>{
+    if(state.currentStage !== 1) return;
+    state.s1.holding = true;
+    el.s1Hint.textContent = 'Holding...';
+    if(!state.s1.interval){
+      state.s1.interval = setInterval(()=>{
+        if(!state.s1.holding) return;
+        state.s1.time += 0.1;
+        const pct = clamp((state.s1.time / totalTimes.s1) * 100, 0, 100);
+        el.s1Progress.style.width = pct + '%';
+        el.s1Time.textContent = fmt(state.s1.time);
+        if(state.s1.time >= totalTimes.s1){
+          clearInterval(state.s1.interval); state.s1.interval = null;
+          el.s1Hint.textContent = 'Stage complete.';
+          advanceStage();
+        }
+      }, 100);
+    }
+  });
+  // Releasing or leaving resets stage 1
+  const s1Reset = ()=>{
+    if(state.currentStage !== 1) return;
+    if(state.s1.holding){
+      state.s1.holding = false;
+      resetStage(1);
+    }
+  };
+  el.holdBtn.addEventListener('mouseleave', s1Reset);
+  document.addEventListener('mouseup', s1Reset);
+
+  // Stage 2 — Stay on tiny target
+  // We only count time while cursor is inside the target's bounding box
+  function isOnTarget(ev){
+    const rect = el.tinyTarget.getBoundingClientRect();
+    const x = ev.clientX, y = ev.clientY;
+    return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+  }
+
+  el.targetArea.addEventListener('mousemove', (ev)=>{
+    if(state.currentStage !== 2) return;
+    const inside = isOnTarget(ev);
+    if(inside && !state.s2.onTarget){
+      state.s2.onTarget = true;
+      el.s2Hint.textContent = 'Do not move.';
+      if(!state.s2.interval){
+        state.s2.interval = setInterval(()=>{
+          if(!state.s2.onTarget) return;
+          state.s2.time += 0.1;
+          const pct = clamp((state.s2.time / totalTimes.s2) * 100, 0, 100);
+          el.s2Progress.style.width = pct + '%';
+          el.s2Time.textContent = fmt(state.s2.time);
+          if(state.s2.time >= totalTimes.s2){
+            clearInterval(state.s2.interval); state.s2.interval = null;
+            el.s2Hint.textContent = 'Stage complete.';
+            advanceStage();
+          }
+        }, 100);
+      }
+    } else if(!inside && state.s2.onTarget){
+      // Left the target — reset
+      state.s2.onTarget = false;
+      resetStage(2);
+    }
+  });
+  // If pointer leaves the area, reset
+  el.targetArea.addEventListener('mouseleave', ()=>{
+    if(state.currentStage === 2){
+      resetStage(2);
+    }
+  });
+
+  // Stage 3 — Keyboard activity
+  el.keyboardArea.addEventListener('click', ()=>{
+    el.keyboardArea.focus({preventScroll:true});
+    el.s3Msg.textContent = 'Focused — keep typing.';
+  });
+  document.addEventListener('keydown', (ev)=>{
+    if(state.currentStage !== 3) return;
+    // Only count while focused in the designated area
+    if(document.activeElement !== el.keyboardArea) return;
+    state.s3.active = true;
+    state.s3.keyCountWindow++;
+    el.s3Rate.textContent = String(state.s3.keyCountWindow);
+    el.s3Hint.textContent = 'Good — keep going.';
+    // Start interval if not running
+    if(!state.s3.interval){
+      state.s3.interval = setInterval(()=>{
+        // Rate check each second
+        const rate = state.s3.keyCountWindow;
+        state.s3.rate = rate;
+        el.s3Rate.textContent = String(rate);
+
+        if(rate >= 1){
+          state.s3.time += 1.0;
+          const pct = clamp((state.s3.time / totalTimes.s3) * 100, 0, 100);
+          el.s3Progress.style.width = pct + '%';
+          el.s3Time.textContent = fmt(state.s3.time);
+          el.s3Hint.textContent = 'Maintain ≥ 1 key per second.';
+          if(state.s3.time >= totalTimes.s3){
+            clearInterval(state.s3.interval); state.s3.interval = null;
+            el.s3Hint.textContent = 'Stage complete.';
+            advanceStage();
+          }
+        } else {
+          // No activity — start grace then reset
+          el.s3Hint.textContent = 'Activity dropped — keep typing or this will reset.';
+          if(!state.s3.graceTimer){
+            state.s3.graceTimer = setTimeout(()=>{
+              resetStage(3);
+            }, 1500);
+          }
+        }
+        // reset window count
+        state.s3.keyCountWindow = 0;
+      }, 1000);
+    }
+    // Clear any existing grace timer since there was activity
+    if(state.s3.graceTimer){ clearTimeout(state.s3.graceTimer); state.s3.graceTimer = null; }
+  });
+
+  // Leaving focus resets
+  el.keyboardArea.addEventListener('blur', ()=>{
+    if(state.currentStage === 3){
+      // quick grace to allow refocus; if not, reset
+      if(!state.s3.graceTimer){
+        state.s3.graceTimer = setTimeout(()=> resetStage(3), 700);
+      }
+    }
+  });
+
+  // Stage 4 — Slow slider
+  let sliderRect = null;
+  function updateSliderRect(){
+    sliderRect = el.sliderLine.getBoundingClientRect();
+  }
+  window.addEventListener('resize', updateSliderRect);
+  updateSliderRect();
+
+  function setSliderPct(p){
+    state.s4.pct = clamp(p, 0, 100);
+    el.sliderFill.style.width = state.s4.pct + '%';
+    el.sliderThumb.style.left = state.s4.pct + '%';
+    el.s4Pct.textContent = Math.round(state.s4.pct) + '%';
+  }
+
+  el.sliderThumb.addEventListener('mousedown', (ev)=>{
+    if(state.currentStage !== 4) return;
+    ev.preventDefault();
+    state.s4.dragging = true;
+    el.s4Hint.textContent = 'Dragging... keep going.';
+    // Enforce 1% per second advancement while dragging
+    if(!state.s4.interval){
+      state.s4.interval = setInterval(()=>{
+        if(!state.s4.dragging) return;
+        const next = state.s4.pct + 1;
+        setSliderPct(next);
+        if(state.s4.pct >= 100){
+          clearInterval(state.s4.interval); state.s4.interval = null;
+          state.s4.dragging = false;
+          el.s4Hint.textContent = 'Stage complete.';
+          advanceStage();
+        }
+      }, 1000);
+    }
+  });
+  document.addEventListener('mousemove', (ev)=>{
+    if(state.currentStage !== 4) return;
+    if(!state.s4.dragging) return;
+    // Thumb follows the fill position; user movement doesn’t change speed, just keeps drag "alive".
+    // No-op movement logic — prevents cheating via instant jump.
+  });
+  const endDrag = ()=>{
+    if(state.currentStage === 4 && state.s4.dragging){
+      state.s4.dragging = false;
+      resetStage(4);
+    }
+  };
+  document.addEventListener('mouseup', endDrag);
+  el.sliderLine.addEventListener('mouseleave', ()=>{
+    if(state.currentStage === 4 && state.s4.dragging){
+      endDrag();
+    }
+  });
+
+  // Visibility/tab change resets the current stage to guarantee “every single time”
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.hidden){
+      resetStage(state.currentStage);
+    }
+  });
+  window.addEventListener('blur', ()=>{
+    resetStage(state.currentStage);
+  });
+
+  // Final button behavior
+  el.finalBtn.addEventListener('click', ()=>{
+    if(state.locked){
+      alert('You have not completed all stages.');
+      return;
+    }
+    // The “single button” after suffering through the gate
+    alert('Finally. Proceeding.');
+  });
+
+  // Initial resets
+  resetStage(1);
+  resetStage(2);
+  resetStage(3);
+  resetStage(4);
+
+  // Accessibility/helpers
+  el.holdBtn.setAttribute('aria-describedby','s1_hint');
+  el.tinyTarget.setAttribute('aria-label','Target');
+  el.sliderThumb.setAttribute('aria-label','Slider thumb');
+})();
+</script>
+</body>
+</html>
